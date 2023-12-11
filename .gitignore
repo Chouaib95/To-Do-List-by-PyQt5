@@ -1,0 +1,8 @@
+# Ignorer le dossier .env
+.env/
+
+# Ignorer tous les fichiers .ui
+#*.ui
+
+# Ignorer le dossier __pycache__
+__pycache__/
