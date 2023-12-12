@@ -98,7 +98,7 @@
      <rect>
       <x>40</x>
       <y>10</y>
-      <width>711</width>
+      <width>481</width>
       <height>41</height>
      </rect>
     </property>
@@ -107,6 +107,41 @@
       <family>Chiller</family>
       <pointsize>14</pointsize>
      </font>
+    </property>
+   </widget>
+   <widget class="QLineEdit" name="duration_lineEdit">
+    <property name="geometry">
+     <rect>
+      <x>680</x>
+      <y>10</y>
+      <width>71</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Chiller</family>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+   </widget>
+   <widget class="QLabel" name="duration_label">
+    <property name="geometry">
+     <rect>
+      <x>550</x>
+      <y>10</y>
+      <width>121</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <property name="font">
+     <font>
+      <family>Chiller</family>
+      <pointsize>14</pointsize>
+     </font>
+    </property>
+    <property name="text">
+     <string>Duration (days)</string>
     </property>
    </widget>
   </widget>

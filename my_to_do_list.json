@@ -1,3 +1,14 @@
 [
-    "Python"
+    {
+        "text": "ed",
+        "checked": true,
+        "duration": 2.0,
+        "remaining_time": "1 days 23 hours 58 minutes"
+    },
+    {
+        "text": "sssd",
+        "checked": false,
+        "duration": 0.1,
+        "remaining_time": "0 days 2 hours 22 minutes"
+    }
 ]
