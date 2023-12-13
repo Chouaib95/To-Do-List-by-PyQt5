@@ -93,7 +93,7 @@ class Ui_MainWindow(object):
         # Ajoutez ces lignes pour configurer la minuterie
         self.auto_save_timer = QtCore.QTimer(MainWindow)
         self.auto_save_timer.timeout.connect(self.auto_save)
-        self.auto_save_timer.start(700)  # Enregistre chaque 900 milliseconde
+        self.auto_save_timer.start(5000)  # Enregistre chaque 900 milliseconde
         
 
     def retranslateUi(self, MainWindow):
