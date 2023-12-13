@@ -1,14 +1,26 @@
 [
     {
-        "text": "ed",
+        "text": "Sport",
         "checked": true,
-        "duration": 2.0,
-        "remaining_time": "1 days 23 hours 58 minutes"
+        "duration": 1.5,
+        "start_time": "2023-12-13T04:03:28.822700"
     },
     {
-        "text": "sssd",
+        "text": "work",
+        "checked": true,
+        "duration": 0.7,
+        "start_time": "2023-12-13T04:03:28.822700"
+    },
+    {
+        "text": "Teamwork",
         "checked": false,
-        "duration": 0.1,
-        "remaining_time": "0 days 2 hours 22 minutes"
+        "duration": 3.0,
+        "start_time": "2023-12-13T04:10:21.875100"
+    },
+    {
+        "text": "foot",
+        "checked": false,
+        "duration": 4.0,
+        "start_time": "2023-12-13T04:35:43.181888"
     }
 ]

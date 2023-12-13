@@ -4,6 +4,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 from pathlib import Path
 import sys, json
 from datetime import datetime, timedelta
+import re
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -64,10 +65,13 @@ class Ui_MainWindow(object):
         font.setPointSize(14)
         self.duration_label.setFont(font)
         self.duration_label.setObjectName("duration_label")
+
         # Modifier le type d'entrée pour accepter des nombres flottants
-        self.duration_lineEdit.setInputMask("999.9")
+        # self.duration_lineEdit.setInputMask("999.99")
+
 
         MainWindow.setCentralWidget(self.centralwidget)
+
         self.menubar = QtWidgets.QMenuBar(MainWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 800, 26))
         self.menubar.setObjectName("menubar")
@@ -84,10 +88,12 @@ class Ui_MainWindow(object):
         self.style()
         self.animations()
         self.load_from_json()
+        self.duration_lineEdit.setText("")
+
         # Ajoutez ces lignes pour configurer la minuterie
         self.auto_save_timer = QtCore.QTimer(MainWindow)
         self.auto_save_timer.timeout.connect(self.auto_save)
-        self.auto_save_timer.start(100)  # Enregistre toutes les 5000 millisecondes (5 secondes)
+        self.auto_save_timer.start(700)  # Enregistre chaque 900 milliseconde
         
 
     def retranslateUi(self, MainWindow):
@@ -97,49 +103,74 @@ class Ui_MainWindow(object):
         self.delete_item_pushButton_2.setText(_translate("MainWindow", "Delete item from the list"))
         self.clear_list_pushButton_3.setText(_translate("MainWindow", "Clear the list"))
         self.duration_label.setText(_translate("MainWindow", "Duration (days)"))
-   
+
+    def extract_substring_until_tab_regex(self,input_string):
+        match = re.search(r'^([^\t]*)', input_string)
+        if match:
+            return match.group(1)
+        else:
+            return ""
+
     def save_to_json(self):
-        items = []
-        for i in range(self.my_list_listWidget.count()):
-            task_item = self.my_list_listWidget.item(i)
-            text = task_item.text()
-            checked = task_item.checkState() == QtCore.Qt.Checked
-            duration = task_item.data(QtCore.Qt.UserRole + 1)
-
-            # Calculer le temps restant avant de sauvegarder
-            remaining_time = self.calculate_remaining_time(duration) if duration is not None else ""
-
-            # Séparez le texte réel de l'élément de liste du temps restant
-            text_without_remaining_time = text.split('(')[0].strip()
-
-            items.append({"text": text_without_remaining_time, "checked": checked, "duration": duration, "remaining_time": remaining_time})
-
+        items = [
+            {
+                "text": self.extract_substring_until_tab_regex(self.my_list_listWidget.item(i).text()),
+                "checked": self.my_list_listWidget.item(i).checkState() == QtCore.Qt.Checked,
+                "duration": self.my_list_listWidget.item(i).data(QtCore.Qt.UserRole + 1),
+                "start_time": self.my_list_listWidget.item(i).data(QtCore.Qt.UserRole)
+            }
+            for i in range(self.my_list_listWidget.count())
+        ]
         with open(self.path_0, "w") as json_file:
             json.dump(items, json_file, indent=4, ensure_ascii=True)
 
-
     def auto_save(self):
         self.save_to_json()
+        self.load_from_json()
+    
+    def time_difference_to_string(self, difference:datetime)->str:
+        days, seconds = difference.days, difference.seconds
+        hours = seconds // 3600
+        minutes = (seconds % 3600) // 60
+        seconds = seconds % 60
+        return f"{days} d - {hours} h - {minutes} min - {seconds} s"
+    
 
     def load_from_json(self):
         try:
             with open(self.path_0, "r") as json_file:
                 items = json.load(json_file)
-                print("Loaded items from JSON:", items)
+                #print("Loaded items from JSON:", items)
+
+                # Effacer tous les éléments de la liste avant d'ajouter les nouveaux
                 self.my_list_listWidget.clear()
+
                 for item in items:
-                    list_item = QtWidgets.QListWidgetItem(item.get('text', ''))
+                    list_item = QtWidgets.QListWidgetItem("")
                     list_item.setFlags(list_item.flags() | QtCore.Qt.ItemIsUserCheckable)
-                    list_item.setCheckState(QtCore.Qt.Checked if item.get('checked') else QtCore.Qt.Unchecked)
-                    list_item.setData(QtCore.Qt.UserRole + 1, item.get('duration', None))
+                    list_item.setCheckState(
+                        QtCore.Qt.Checked if item.get('checked') else QtCore.Qt.Unchecked
+                    )
+
+                    # Ajouter la date et l'heure de début
+                    list_item.setData(QtCore.Qt.UserRole, item.get('start_time', self.start_time.isoformat()))
+
+                    # Ajouter la durée
+                    list_item.setData(QtCore.Qt.UserRole + 1, float(item.get('duration', 0)))
+
+                    # Calculer le temps restant
+                    remaining_time = datetime.fromisoformat(item.get('start_time', self.start_time.isoformat())) + timedelta(days=float(item.get('duration', 0))) - datetime.now()
+
+                    # Afficher le temps restant dans la liste
+                    remaining_time_str = self.time_difference_to_string(remaining_time)
+                    text_to_treat = item.get('text', '')
+                    list_item.setText(f"{self.extract_substring_until_tab_regex(text_to_treat)}\t-\tRemaining Time: {remaining_time_str}")
+
                     self.my_list_listWidget.addItem(list_item)
 
-                    # Ajoutez le temps restant à la colonne nouvellement ajoutée
-                    remaining_time = item.get('remaining_time', '')
-                    list_item.setText(f"{list_item.text()} \t \t ({remaining_time} remaining)")
+                #print("Items added to the list widget.")
+                #MainWindow.show()#au cas où la fenetre ne s'ouvre pas
 
-                print("Items added to the list widget.")
-                MainWindow.show()
         except FileNotFoundError:
             print("File not found:", self.path_0)
         except Exception as e:
@@ -147,22 +178,29 @@ class Ui_MainWindow(object):
 
     def add_item(self):
         contenu = self.zone_text_lineEdit.text()
-        duration_text = self.duration_lineEdit.text()
-        try:
-            duration = round(float(duration_text),1)
-        except ValueError:
-            return self.duration_lineEdit.setText("#NAN")
-        
+        duration_days = self.duration_lineEdit.text().strip()
         list_item = QtWidgets.QListWidgetItem(contenu)
         list_item.setFlags(list_item.flags() | QtCore.Qt.ItemIsUserCheckable)
         list_item.setCheckState(QtCore.Qt.Unchecked)
-        list_item.setData(QtCore.Qt.UserRole + 1, duration)  # Utilisez UserRole + 1 pour stocker la durée
+
+        # Ajouter la date et l'heure de début
+        list_item.setData(QtCore.Qt.UserRole, self.start_time.isoformat())
+
+        # Ajouter la durée
+        list_item.setData(QtCore.Qt.UserRole + 1, float(duration_days))
+        
+        # Calculer le temps restant
+        remaining_time = self.start_time + timedelta(days=float(duration_days)) - datetime.now()
+
+        # Afficher le temps restant dans la liste
+        remaining_time_str = self.time_difference_to_string(remaining_time)
+        
+        # Afficher le temps restant dans la liste
+        list_item.setText(f"{contenu}\t-\tRemaining Time: {remaining_time_str}")
+
         self.my_list_listWidget.addItem(list_item)
         self.zone_text_lineEdit.setText("")
-        self.duration_lineEdit.setText("")  # Réinitialisez le champ de durée
-        self.update_remaining_time()  # Mettez à jour le temps restant
-        
-        # Ajout d'une animation lors de l'ajout d'un élément
+        self.duration_lineEdit.setText("")
         self.animation.start()
         self.save_to_json()
 
@@ -180,37 +218,6 @@ class Ui_MainWindow(object):
         self.add_item_pushButton.clicked.connect(self.add_item)
         self.delete_item_pushButton_2.clicked.connect(self.delete_item)
         self.clear_list_pushButton_3.clicked.connect(self.clear_list)
-
-    def calculate_remaining_time(self, duration):
-        if duration is None:
-            return ""
-
-        # Convertir la durée en timedelta
-        duration_timedelta = timedelta(days=duration)
-
-        # Calculer le temps écoulé depuis le début
-        elapsed_time = datetime.now() - self.start_time
-
-        # Calculer le temps restant en soustrayant le temps écoulé de la durée totale
-        remaining_time_timedelta = duration_timedelta - elapsed_time
-
-        # Extraire les jours, heures et minutes
-        days = remaining_time_timedelta.days
-        hours, remainder = divmod(remaining_time_timedelta.seconds, 3600)
-        minutes = remainder // 60
-
-        # Retourner le temps restant sous forme de chaîne
-        return f"{days} days {hours} hours {minutes} minutes"
-
-
-    def update_remaining_time(self):
-        for i in range(self.my_list_listWidget.count()):
-            duration_data = self.my_list_listWidget.item(i).data(QtCore.Qt.UserRole + 1)
-            if duration_data is not None:
-                duration = int(duration_data)
-                remaining_time = self.calculate_remaining_time(duration)
-                # Ajoutez le temps restant à la colonne nouvellement ajoutée
-                self.my_list_listWidget.item(i).setText(f"{self.my_list_listWidget.item(i).text()} \t \t ({remaining_time} remaining)")
 
      # Ajout de styles sophistiqués
     def style(self):
@@ -249,7 +256,15 @@ class Ui_MainWindow(object):
                                                    "QPushButton:hover {"
                                                    "background-color: #0077A8;"
                                                    "}")
-        
+        self.duration_label.setStyleSheet("QLabel {"
+                                  "font-family: 'Chiller';"
+                                  "font-size: 22px;"
+                                  "color: #333;"
+                                  "border: 2px dashed #FFA07A;"  # Couleur saumon en pointillé
+                                  "border-radius: 5px;"
+                                  "padding: 5px;"
+                                  "background-color: #FFDAB9;"  # Couleur de fond saumon
+                                  "}")
 
     def animations(self):
         # Ajout d'animations
@@ -279,8 +294,9 @@ class Ui_MainWindow(object):
         self.background_animation.setEndValue(1.0)
         self.background_animation.setEasingCurve(QtCore.QEasingCurve.OutQuad)
         self.background_animation.start()
+
         # Rendre l'arrière-plan de la fenêtre principale légèrement transparent
-        # MainWindow.setWindowOpacity(0.9)  # Ajustez la valeur selon vos besoins (0.0 à 1.0)
+        MainWindow.setWindowOpacity(0.95)  # Ajustez la valeur selon vos besoins (0.0 à 1.0)
 
 if __name__ == "__main__":
     app = QtWidgets.QApplication(sys.argv)
@@ -289,4 +305,3 @@ if __name__ == "__main__":
     ui.setupUi(MainWindow)
     MainWindow.show()
     sys.exit(app.exec_())
-
